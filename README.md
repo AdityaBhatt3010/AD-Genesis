@@ -1,4 +1,4 @@
-# ADGenesis
+# AD Genesis
 ### Automated Active Directory Provisioning & Workstation Administration
 
 > Generate identities. Provision the domain. Assign privileges. Manage endpoints.
