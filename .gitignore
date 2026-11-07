@@ -1,0 +1,15 @@
+# Generated configuration may contain plaintext passwords
+output/*.json
+
+# PowerShell logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
