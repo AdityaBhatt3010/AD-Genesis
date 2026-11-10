@@ -260,23 +260,36 @@ Rename each workstation from an elevated PowerShell session:
 Rename-Computer -NewName WS1 -Restart
 ```
 
+![](AD/6/1.png)
+
 Repeat on the other workstations using `WS2` and `WS3`.
 
 ### 4. DNS Configuration and Domain Join
 
 Ensure each workstation uses the Domain Controller as its DNS server.
 
-Verify DNS resolution:
+Verify & Set DNS resolution:
 
 ```powershell
 Resolve-DnsName DC01.Adi.com
 ```
 
+```powershell
+Get-DnsClientServerAddress 
+```
+
+Now, set the Interface Index of Ethernet0 to ServerAddess of DC's IP.
+
+```powershell
+Set-DnsClientServerAddress -InterfaceIndex 13 -ServerAdress IP
+```
 Join the domain:
 
 ```powershell
 Add-Computer -DomainName "Adi.com" -Credential (Get-Credential) -Restart
 ```
+
+![](AD/6/2.png)
 
 Verify domain membership:
 
@@ -290,6 +303,8 @@ On the DC, verify that the workstations are registered:
 Get-ADComputer -Filter * | Select-Object Name, DNSHostName
 ```
 
+![](AD/6/3.png)
+
 ### 5. Enable PowerShell Remoting
 
 Run the following command in an elevated PowerShell session on each workstation:
@@ -298,12 +313,119 @@ Run the following command in an elevated PowerShell session on each workstation:
 Enable-PSRemoting -Force
 ```
 
+![](AD/6/4.png)
+
+For any troubleshooting,
+
+![](AD/6/6.png)
+
+## Troubleshooting MC-to-Workstation Connectivity
+
+### i. Configure DNS on Management Client (MC)
+
+Initially, MC could not resolve the domain-joined machines using their FQDNs.
+
+Configured the preferred DNS server to point to DC1:
+
+```powershell
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet0" -ServerAddresses 192.168.136.131
+```
+
+Verified DNS resolution:
+
+```powershell
+Resolve-DnsName DC1.Adi.com
+Resolve-DnsName WS1.Adi.com
+Resolve-DnsName WS2.Adi.com
+```
+
+### ii. Enable ICMP Echo Requests
+
+Ping requests from MC to WS1 and WS2 were timing out due to Windows Firewall rules.
+
+Executed locally on both workstations using elevated PowerShell:
+
+```powershell
+Enable-NetFirewallRule -Name FPS-ICMP4-ERQ-In
+```
+
+Verified the firewall rule:
+
+```powershell
+Get-NetFirewallRule -Name FPS-ICMP4-ERQ-In |
+Select-Object DisplayName, Enabled, Profile
+```
+
+### iii. Verify WinRM Connectivity
+
+Checked whether MC could reach the WinRM HTTP listener on WS1:
+
+```powershell
+Test-NetConnection WS1.Adi.com -Port 5985
+```
+
+**Result:** `TcpTestSucceeded : True`
+
+### iv. Verify ICMP Connectivity
+
+Retested connectivity from MC:
+
+```powershell
+Test-Connection WS1.Adi.com -Count 1
+```
+
+**Result:** Successful ICMP response from WS1 (`192.168.136.132`).
+
+### v. Final Connectivity Verification
+
+The following checks were successfully established:
+
+| Test | Result |
+|---|---|
+| MC → DC1 DNS resolution | Successful |
+| MC → WS1 DNS resolution | Successful |
+| MC → WS2 DNS resolution | Successful |
+| MC → WS1 ICMP | Successful |
+| MC → WS1 TCP 5985 (WinRM) | Successful |
+
+**Next Step:** Verify actual remote PowerShell execution using `Invoke-Command` with Kerberos authentication.
+
+```powershell
+Invoke-Command -ComputerName WS1.Adi.com,WS2.Adi.com `
+-Authentication Kerberos `
+-ScriptBlock {
+    $env:COMPUTERNAME
+}
+```
+
+*Note: Successful DNS, ICMP and TCP connectivity do not independently guarantee successful WinRM authentication or remote execution.*
+
 Test WinRM connectivity from MC:
 
 ```powershell
 Test-WSMan WS1
 Test-WSMan WS2
 Test-WSMan WS3
+```
+
+![](AD/6/5.png)
+
+Enable WinRM (in MC):
+
+```powershell
+Set-Service WinRM -StartupType Automatic
+Start-Service WinRM
+Get-Service WinRM
+```
+
+# WiP CheckPoint
+
+To hop into DC from MC:
+
+```powershell
+$dc = New-PSSession -ComputerName 192.168.136.131 -Credential (Get-Credential)
+
+Enter-PSSession $dc
 ```
 
 Test remote execution:
@@ -317,7 +439,7 @@ Invoke-Command -ComputerName WS1,WS2,WS3 -ScriptBlock { $env:COMPUTERNAME }
 From MC:
 
 ```powershell
-Test-Connection DC01
+Test-Connection DC1
 Test-Connection WS1
 Test-Connection WS2
 Test-Connection WS3
