@@ -523,40 +523,49 @@ Run both scripts from the repository root on MC.
 
 The script reads its input datasets from `data/` and generates the JSON configuration under `output/`.
 
+![](7.png) <br/>
+
+Note: Since you will download the file from My GitHub, you might need to run
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
 ### Step 2 — Inspect Generated JSON
 
 ```powershell
 Get-Content .\output\domain.json
 ```
 
+![](8.png) <br/>
+
 Review the users, groups, passwords, and workstation assignments before provisioning.
 
-### Step 3 — Provision Active Directory
+### Step 3 — WiP REFINE INTO SECTIONS OF CONNECT THEN THIS THAT LATER!!!
 
 ```powershell
-.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC01.Adi.com
+$cred = (Get-Credential)
+
+$dc = New-PSSession 192.168.136.131 -Credential $cred
 ```
-
-The provisioning sequence:
-
-1. Discovers the AD domain.
-2. Validates the JSON domain against the actual domain.
-3. Creates all configured AD groups.
-4. Creates all configured domain users.
-5. Assigns users to their designated AD groups.
-6. Adds selected users to local Administrators groups on the specified workstations.
-
-### Step 4 — Verify the Environment
-
-Use the verification commands below to confirm the provisioning results.
-
-### Step 5 — Clean Up
 
 ```powershell
-.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC01.Adi.com -Undo
+Copy-Item .\genAD.ps1 -ToSession $dc C:\Windows\Tasks\
+
+Copy-Item .\op.json -ToSession $dc C:\Windows\Tasks\
 ```
 
----
+```powershell
+Enter-PSSession $dc
+
+cd C:\Windows\Tasks\
+```
+
+![](9.png) <br/>
+
+```powershell
+Set-ExecutionPolicy RemoteSigned
+.\genAD.ps1 .\ad_schema.json
+```
 
 ## JSON Structure
 
