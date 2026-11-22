@@ -209,7 +209,7 @@ The lab uses the following domain configuration:
 |---|---|
 | DNS Domain | `Adi.com` |
 | NetBIOS Domain | `Adi` |
-| Example DC hostname | `DC01` |
+| Example DC hostname | `DC1` |
 
 Ensure that AD DS and DNS are operational before proceeding.
 
@@ -271,7 +271,7 @@ Ensure each workstation uses the Domain Controller as its DNS server.
 Verify & Set DNS resolution:
 
 ```powershell
-Resolve-DnsName DC01.Adi.com
+Resolve-DnsName DC1.Adi.com
 ```
 
 ```powershell
@@ -420,13 +420,25 @@ Get-Service WinRM
 
 # WiP CheckPoint
 
+Set in Trusted host (in WS1 & WS2):
+
+```powershell
+set-item WSMAN:\localhost\Client\TrustedHosts -Value "DC1.Adi.com"
+```
+
+![](AD/6/10ILostCountLol.png) 
+
 To hop into DC from MC:
 
 ```powershell
-$dc = New-PSSession -ComputerName 192.168.136.131 -Credential (Get-Credential)
+$cred = (Get-Credential)
+
+$dc = New-PSSession -ComputerName 192.168.136.131 -Credential $cred
 
 Enter-PSSession $dc
 ```
+
+Enter credential with DC name like "Adi\Administrator"
 
 Test remote execution:
 
@@ -494,19 +506,19 @@ This generates:
 Standard provisioning:
 
 ```powershell
-.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC01.Adi.com
+.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC1.Adi.com
 ```
 
 With explicit workstation credentials:
 
 ```powershell
-.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC01.Adi.com -WorkstationCredential (Get-Credential)
+.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC1.Adi.com -WorkstationCredential (Get-Credential)
 ```
 
 Undo:
 
 ```powershell
-.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC01.Adi.com -Undo
+.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC1.Adi.com -Undo
 ```
 
 ---
@@ -626,13 +638,13 @@ A local administrator assignment is not equivalent to Domain Admin membership.
 ### Verify AD Users
 
 ```powershell
-Get-ADUser -Filter * -Server DC01.Adi.com | Select-Object Name, SamAccountName, Enabled
+Get-ADUser -Filter * -Server DC1.Adi.com | Select-Object Name, SamAccountName, Enabled
 ```
 
 ### Verify AD Groups
 
 ```powershell
-Get-ADGroup -Filter * -Server DC01.Adi.com | Select-Object Name, GroupScope
+Get-ADGroup -Filter * -Server DC1.Adi.com | Select-Object Name, GroupScope
 ```
 
 ### Verify Group Membership
@@ -640,7 +652,7 @@ Get-ADGroup -Filter * -Server DC01.Adi.com | Select-Object Name, GroupScope
 Replace `IT` with one of the generated group names:
 
 ```powershell
-Get-ADGroupMember -Identity IT -Server DC01.Adi.com
+Get-ADGroupMember -Identity IT -Server DC1.Adi.com
 ```
 
 ### Verify Local Administrators
@@ -685,7 +697,7 @@ This helps prevent accidental removal of unrelated AD objects.
 ### Cleanup Command
 
 ```powershell
-.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC01.Adi.com -Undo
+.\genAD.ps1 -JSONFile .\output\domain.json -DCServer DC1.Adi.com -Undo
 ```
 
 Keep the original JSON configuration until cleanup is complete.
