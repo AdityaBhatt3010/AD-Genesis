@@ -1,4 +1,4 @@
-# AD Genesis
+<img width="511" height="384" alt="image" src="https://github.com/user-attachments/assets/e0aeb445-79a9-4bed-81b6-264da4c50863" /># AD Genesis
 ### Automated Active Directory Provisioning & Workstation Administration
 
 > Generate identities. Provision the domain. Assign privileges. Manage endpoints.
@@ -418,29 +418,33 @@ Start-Service WinRM
 Get-Service WinRM
 ```
 
-# WiP CheckPoint
+### Configure TrustedHosts
 
-Set in Trusted host (in WS1 & WS2):
+Configure TrustedHosts on WS1 and WS2:
 
 ```powershell
-set-item WSMAN:\localhost\Client\TrustedHosts -Value "DC1.Adi.com"
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "DC1.Adi.com"
 ```
 
 ![](AD/6/10ILostCountLol.png) 
 
-To hop into DC from MC:
+### Establish a Remote Session with DC
+
+To connect to the DC from MC:
 
 ```powershell
-$cred = (Get-Credential)
+$cred = Get-Credential
 
 $dc = New-PSSession -ComputerName 192.168.136.131 -Credential $cred
 
 Enter-PSSession $dc
 ```
 
-Enter credential with DC name like "Adi\Administrator"
+When prompted, enter the credentials in the domain format, e.g. `Adi\Administrator`.
 
-Test remote execution:
+### Test Remote Execution
+
+Verify remote command execution across the workstations:
 
 ```powershell
 Invoke-Command -ComputerName WS1,WS2,WS3 -ScriptBlock { $env:COMPUTERNAME }
@@ -448,7 +452,7 @@ Invoke-Command -ComputerName WS1,WS2,WS3 -ScriptBlock { $env:COMPUTERNAME }
 
 ### 6. Verify Network Connectivity
 
-From MC:
+Run the following checks from MC:
 
 ```powershell
 Test-Connection DC1
@@ -457,7 +461,7 @@ Test-Connection WS2
 Test-Connection WS3
 ```
 
-Verify domain controller discovery:
+Verify Domain Controller discovery:
 
 ```powershell
 nltest /dsgetdc:Adi.com
@@ -473,10 +477,10 @@ At this point, MC should be able to communicate with the DC and all target works
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `OutputJSONFile` | String | Mandatory | Destination path for generated JSON. |
+| `OutputJSONFile` | String | Mandatory | Destination path for the generated JSON file. |
 | `UserCount` | Integer | `5` | Number of users to generate. |
 | `GroupCount` | Integer | `1` | Number of AD groups to generate. |
-| `LocalAdminCount` | Integer | `0` | Number of users selected for local admin assignment. |
+| `LocalAdminCount` | Integer | `0` | Number of users selected for local Administrator assignment. |
 | `Workstations` | String Array | Empty | Workstation hostnames assigned to selected users. |
 
 #### Example
@@ -489,14 +493,14 @@ This generates:
 
 - 10 domain users.
 - 3 AD groups.
-- 4 randomly selected local administrator users.
-- Local administrator assignments on WS1, WS2, and WS3 for each selected user.
+- 4 randomly selected users for local Administrator assignment.
+- Local Administrator assignments across WS1, WS2, and WS3 for the selected users.
 
 ### `genAD.ps1`
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `JSONFile` | String | Mandatory | JSON configuration file. |
+| `JSONFile` | String | Mandatory | Path to the JSON configuration file. |
 | `DCServer` | String | Optional | Domain Controller used for domain discovery. |
 | `WorkstationCredential` | PSCredential | Optional | Credentials used for workstation remoting. |
 | `Undo` | Switch | Off | Removes generated objects and workstation memberships. |
@@ -537,7 +541,8 @@ The script reads its input datasets from `data/` and generates the JSON configur
 
 ![](7.png) <br/>
 
-Note: Since you will download the file from My GitHub, you might need to run
+**Note:** Since you're downloading the repository from GitHub, PowerShell might block script execution depending on your execution policy. Temporarily bypass it for the current session:
+
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
@@ -550,21 +555,27 @@ Get-Content .\output\domain.json
 
 ![](8.png) <br/>
 
-Review the users, groups, passwords, and workstation assignments before provisioning.
+Review the generated users, groups, passwords, and workstation assignments before proceeding with provisioning.
 
-### Step 3 — WiP REFINE INTO SECTIONS OF CONNECT THEN THIS THAT LATER!!!
+### Step 3 — Provisioning Through PowerShell Remoting
+
+First, establish a remote session with the DC:
 
 ```powershell
-$cred = (Get-Credential)
+$cred = Get-Credential
 
 $dc = New-PSSession 192.168.136.131 -Credential $cred
 ```
+
+Transfer the provisioning script and JSON configuration to the DC:
 
 ```powershell
 Copy-Item .\genAD.ps1 -ToSession $dc C:\Windows\Tasks\
 
 Copy-Item .\op.json -ToSession $dc C:\Windows\Tasks\
 ```
+
+Enter the remote session and navigate to the destination directory:
 
 ```powershell
 Enter-PSSession $dc
@@ -574,10 +585,35 @@ cd C:\Windows\Tasks\
 
 ![](9.png) <br/>
 
+Set the execution policy and execute the provisioning script:
+
 ```powershell
 Set-ExecutionPolicy RemoteSigned
 .\genAD.ps1 .\ad_schema.json
 ```
+
+**A small catch here!**
+
+The command works when local Administrator assignments are not configured. However, when local Administrator assignments are included, I encountered the PowerShell Remoting **Second-Hop Issue**.
+
+This happens because the DC needs to authenticate to another machine (WS) during remote execution. Credentials used for the initial MC → DC connection are not automatically delegated to the subsequent DC → WS connection.
+
+**Current workaround:** Open the DC directly and execute the provisioning script locally:
+
+```powershell
+cd C:\Windows\Tasks\
+.\genAD.ps1 .\ad_schema.json
+```
+
+This is the current working approach for the lab. I'll work on resolving the second-hop issue in a future update.
+
+For now, it works!
+
+As the famous saying goes, *"If it works, don't touch it."*
+
+Feel free to fork the repository and contribute a better solution!
+
+![](11.png) <br/>
 
 ## JSON Structure
 
@@ -618,18 +654,18 @@ The generated configuration follows this general structure:
 }
 ```
 
-This is an illustrative schema. Actual names, passwords, and group assignments are generated from the files in `data/`.
+This is an illustrative schema. Actual names, passwords, and group assignments are generated from the datasets in `data/`.
 
 ### Understanding `local_admin`
 
 | JSON value | Meaning |
 |---|---|
-| `["WS1"]` | User is a local admin on WS1. |
-| `["WS1","WS2"]` | User is a local admin on WS1 and WS2. |
-| `["WS1","WS2","WS3"]` | User is a local admin on all three workstations. |
-| `[]` | User has no workstation local admin assignment. |
+| `["WS1"]` | User is a local Administrator on WS1. |
+| `["WS1","WS2"]` | User is a local Administrator on WS1 and WS2. |
+| `["WS1","WS2","WS3"]` | User is a local Administrator on all three workstations. |
+| `[]` | User has no workstation local Administrator assignment. |
 
-A local administrator assignment is not equivalent to Domain Admin membership.
+A local Administrator assignment is limited to the specified workstation and is not equivalent to Domain Admin membership.
 
 ---
 
@@ -657,18 +693,32 @@ Get-ADGroupMember -Identity IT -Server DC1.Adi.com
 
 ### Verify Local Administrators
 
-Run from MC:
+Run from the MC session or DC:
 
 ```powershell
 Invoke-Command -ComputerName WS1,WS2,WS3 -ScriptBlock { Write-Host "Machine: $env:COMPUTERNAME"; Get-LocalGroupMember -Group Administrators }
 ```
 
-Look for the expected domain accounts:
+![](12.png) <br/>
+
+Check the output for the expected domain accounts, for example:
 
 ```text
 Adi\jsmith
 Adi\jdoe
 ```
+
+### Test Local Administrator Access
+
+Now, let's verify the assigned privileges by logging in with one of the accounts configured as a local Administrator.
+
+For this test, we'll use `bwright`.
+
+![](13.png) <br/>
+
+We can now open Terminal or PowerShell with elevated privileges on WS1 without any issues.
+
+![](14.png) <br/>
 
 ---
 
