@@ -1,4 +1,4 @@
-<img width="511" height="384" alt="image" src="https://github.com/user-attachments/assets/e0aeb445-79a9-4bed-81b6-264da4c50863" /># AD Genesis
+# AD Genesis
 ### Automated Active Directory Provisioning & Workstation Administration
 
 > Generate identities. Provision the domain. Assign privileges. Manage endpoints.
