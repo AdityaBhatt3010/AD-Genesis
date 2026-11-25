@@ -539,7 +539,7 @@ Run both scripts from the repository root on MC.
 
 The script reads its input datasets from `data/` and generates the JSON configuration under `output/`.
 
-![](7.png) <br/>
+![](AD/6/7.png) <br/>
 
 **Note:** Since you're downloading the repository from GitHub, PowerShell might block script execution depending on your execution policy. Temporarily bypass it for the current session:
 
@@ -553,7 +553,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 Get-Content .\output\domain.json
 ```
 
-![](8.png) <br/>
+![](AD/6/8.png) <br/>
 
 Review the generated users, groups, passwords, and workstation assignments before proceeding with provisioning.
 
@@ -583,7 +583,7 @@ Enter-PSSession $dc
 cd C:\Windows\Tasks\
 ```
 
-![](9.png) <br/>
+![](AD/6/9.png) <br/>
 
 Set the execution policy and execute the provisioning script:
 
@@ -613,7 +613,7 @@ As the famous saying goes, *"If it works, don't touch it."*
 
 Feel free to fork the repository and contribute a better solution!
 
-![](11.png) <br/>
+![](AD/6/11.png) <br/>
 
 ## JSON Structure
 
@@ -699,7 +699,7 @@ Run from the MC session or DC:
 Invoke-Command -ComputerName WS1,WS2,WS3 -ScriptBlock { Write-Host "Machine: $env:COMPUTERNAME"; Get-LocalGroupMember -Group Administrators }
 ```
 
-![](12.png) <br/>
+![](AD/6/12.png) <br/>
 
 Check the output for the expected domain accounts, for example:
 
@@ -714,11 +714,11 @@ Now, let's verify the assigned privileges by logging in with one of the accounts
 
 For this test, we'll use `bwright`.
 
-![](13.png) <br/>
+![](AD/6/13.png) <br/>
 
 We can now open Terminal or PowerShell with elevated privileges on WS1 without any issues.
 
-![](14.png) <br/>
+![](AD/6/14.png) <br/>
 
 ---
 
