@@ -581,6 +581,8 @@ Enter the remote session and navigate to the destination directory:
 Enter-PSSession $dc
 
 cd C:\Windows\Tasks\
+
+ls
 ```
 
 ![](AD/6/9.png) <br/>
